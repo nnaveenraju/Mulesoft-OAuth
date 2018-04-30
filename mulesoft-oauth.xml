@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:mule-ss="http://www.mulesoft.org/schema/mule/spring-security"
+	xmlns:context="http://www.springframework.org/schema/context" xmlns:api-platform-gw="http://www.mulesoft.org/schema/mule/api-platform-gw"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:oauth2-provider="http://www.mulesoft.org/schema/mule/oauth2-provider" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:spring="http://www.springframework.org/schema/beans" 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.mulesoft.org/schema/mule/spring-security http://www.mulesoft.org/schema/mule/spring-security/current/mule-spring-security.xsd
+http://www.mulesoft.org/schema/mule/api-platform-gw http://www.mulesoft.org/schema/mule/api-platform-gw/current/mule-api-platform-gw.xsd
+http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/oauth2-provider http://www.mulesoft.org/schema/mule/oauth2-provider/current/mule-oauth2-provider.xsd
+http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-current.xsd">
+    
+    <http:listener-config name="HTTP_Listener_Configuration" host="0.0.0.0" port="8081" doc:name="HTTP Listener Configuration"/>
+    
+    <oauth2-provider:config name="OAuth_provider_module"  doc:name="OAuth provider module"
+    clientStore-ref="my-client-store"     
+    enableRefreshToken="true"  
+    accessTokenEndpointPath="oauth/token" authorizationEndpointPath="oauth/authorize"
+    listenerConfig-ref="HTTP_Listener_Configuration"
+    
+    clientSecurityProvider-ref="multiple-users-client-security-provider"
+    issueNewRefreshToken="true" supportedGrantTypes="AUTHORIZATION_CODE CLIENT_CREDENTIALS" 
+    tokenTtlSeconds="100" >
+    
+    </oauth2-provider:config>
+	
+<!-- 	<spring:beans>
+        <ss:authentication-manager id="resourceOwnerAuthenticationManager"> 
+            <ss:authentication-provider>
+                <ss:user-service id="resourceOwnerUserService">
+                    <ss:user name="john" password="doe" authorities="RESOURCE_OWNER"/>
+                </ss:user-service>
+            </ss:authentication-provider>
+        </ss:authentication-manager>
+</spring:beans>
+	
+	<mule-ss:security-manager>
+        <mule-ss:delegate-security-provider name="resourceOwnerSecurityProvider" delegate-ref="resourceOwnerAuthenticationManager"/>
+    </mule-ss:security-manager> -->
+    
+	<!-- <oauth2-provider:config
+        name="oauth2Provider"
+        providerName="TweetBook"
+        host="localhost"
+        port="8081"
+        authorizationEndpointPath="oauth/authorize"
+        accessTokenEndpointPath="oauth/token"
+        resourceOwnerSecurityProvider-ref="resourceOwnerSecurityProvider"
+        scopes="READ_PROFILE WRITE_PROFILE READ_BOOKSHELF WRITE_BOOKSHELF" doc:name="OAuth provider module">
+    </oauth2-provider:config> -->
+    
+	
+	<api-platform-gw:client-security-provider id="multiple-users-client-security-provider" doc:name="multiple-users-client-security-provider"  />
+	<api-platform-gw:client-store id="my-client-store" doc:name="Client Store" />
+    
+    <context:property-placeholder location="config.properties"/>
+    <flow name="mulesoft-oauthFlow1">
+        <http:listener config-ref="HTTP_Listener_Configuration" path="/test" doc:name="HTTP"/>
+        <oauth2-provider:validate config-ref="OAuth_provider_module" doc:name="OAuth provider module" />
+        <set-payload value="Valid request.. " doc:name="Set Payload"/>
+    </flow>
+
+    <flow name="mulesoft-oauthFlow">
+        <http:listener config-ref="HTTP_Listener_Configuration" path="/*" doc:name="HTTP"/>
+        <logger message="incoming.." level="INFO" doc:name="Logger"/>
+        <oauth2-provider:validate config-ref="OAuth_provider_module" doc:name="OAuth provider module" />
+        <custom-processor
+			class="com.mulesoft.module.oauth2.ValidatorResponseBuilder" doc:name="ValidatorResponseBuilder"
+			name="Custom_Processor" />
+		<logger level="INFO" doc:name="Logger" message="#[' ------Token is valid.']" />
+		
+    </flow>
+</mule>
